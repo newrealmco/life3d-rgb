@@ -63,6 +63,7 @@ pytest --cov=life3d --cov=visualize
 - **Mutation logic**: Single-newborn mutations with probability and bounds checking
 - **Determinism**: Fixed random seeds produce identical results
 - **Visualization**: Smoke tests for PNG rendering with Agg backend
+- **UI components**: Tkinter import, App/SeedManager creation, variable initialization
 
 ### Development Guidelines
 
@@ -72,3 +73,40 @@ pytest -q
 ```
 
 The `.gitignore` file excludes pytest cache and coverage files. All tests should pass before committing changes.
+
+## Troubleshooting
+
+### macOS: "ModuleNotFoundError: No module named '_tkinter'"
+
+If you're using Homebrew Python and get a tkinter error when running `python ui.py`:
+
+**Solution 1 (Recommended)**: Install tkinter via Homebrew
+```bash
+brew install python-tk
+```
+
+**Solution 2**: Use system Python (which includes tkinter)
+```bash
+/usr/bin/python3 ui.py
+```
+
+**Solution 3**: Create virtual environment with system Python
+```bash
+/usr/bin/python3 -m venv venv-system
+source venv-system/bin/activate
+pip install -r requirements.txt
+python ui.py
+```
+
+### Linux: Missing tkinter
+
+On Ubuntu/Debian:
+```bash
+sudo apt-get install python3-tk
+```
+
+On RHEL/CentOS/Fedora:
+```bash
+sudo dnf install tkinter
+# or: sudo yum install tkinter
+```
