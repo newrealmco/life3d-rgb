@@ -64,7 +64,10 @@ def test_seed_manager_creation():
         def mock_shape_getter():
             return (10, 10, 10)
         
-        seed_mgr = ui.SeedManager(root, mock_shape_getter)
+        def mock_status_callback(msg):
+            pass
+        
+        seed_mgr = ui.SeedManager(root, mock_shape_getter, mock_status_callback)
         assert seed_mgr is not None
         assert hasattr(seed_mgr, 'seeds')
         assert hasattr(seed_mgr, 'add_seed')
