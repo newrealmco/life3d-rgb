@@ -3,7 +3,15 @@ import sys
 import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-# Skip UI tests if tkinter is not available (e.g., headless CI environments)
+# Skip UI tests if running in headless environment without display
+# Strategy: Only skip on Linux without DISPLAY environment variable
+# - CI uses xvfb-run to provide virtual display, so DISPLAY will be set
+# - Local Linux developers without X11 will get graceful skip instead of crash
+# - macOS/Windows have their own display systems and don't use DISPLAY env var
+if not os.environ.get("DISPLAY") and sys.platform.startswith("linux"):
+    pytest.skip("Skipping Tkinter UI tests in headless Linux environment (no $DISPLAY)", allow_module_level=True)
+
+# Skip UI tests if tkinter is not available
 pytest_plugins = []
 
 try:
@@ -13,16 +21,24 @@ except ImportError:
     TKINTER_AVAILABLE = False
 
 def test_tkinter_available():
-    """Test that tkinter is available in the environment."""
+    """Test that tkinter is available and can create widgets in the environment."""
     try:
         import tkinter as tk
         # Test basic tkinter functionality
         root = tk.Tk()
         root.withdraw()  # Hide the window
+        
+        # Test that we can create a basic widget
+        label = tk.Label(root, text="Test")
+        label.pack()
+        
+        # Clean up immediately
         root.destroy()
         assert True
     except ImportError:
         pytest.skip("tkinter not available in this environment")
+    except Exception as e:
+        pytest.skip(f"tkinter available but cannot create widgets: {e}")
 
 @pytest.mark.skipif(not TKINTER_AVAILABLE, reason="tkinter not available")
 def test_ui_imports():

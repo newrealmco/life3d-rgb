@@ -250,7 +250,16 @@ Tests run automatically on GitHub Actions for every push and pull request:
 
 - **OS**: Ubuntu Latest
 - **Python versions**: 3.10, 3.11, 3.12
-- **Test suite**: All 26 tests with coverage reporting
-- **Headless**: Uses matplotlib Agg backend (no GUI required)
+- **Test suite**: All tests with coverage reporting
+- **Headless**: Uses matplotlib Agg backend + xvfb for Tkinter UI tests
+- **Display**: Virtual X11 display (xvfb) enables GUI tests in headless CI
 
-The CI workflow installs both runtime and development dependencies, ensures headless operation, and runs the complete test suite with coverage. Build status is shown in the badge above.
+### Tkinter Testing Strategy
+
+The project uses a dual approach for Tkinter UI testing:
+
+1. **CI Environment**: Uses `xvfb-run` to provide a virtual display for full UI testing
+2. **Local Fallback**: Automatically skips UI tests on headless Linux systems without `$DISPLAY`
+3. **Cross-platform**: Works on macOS/Windows (native display) and Linux (X11/Wayland)
+
+The CI workflow installs both runtime and development dependencies, ensures headless operation with virtual display support, and runs the complete test suite with coverage. Build status is shown in the badge above.

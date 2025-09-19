@@ -36,13 +36,22 @@ jobs:
       run: |
         pip install -r requirements-dev.txt
 
+    - name: Install OS packages for Tkinter and virtual display
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk xvfb
+
     - name: Verify headless matplotlib
       run: |
         python -c "import matplotlib; matplotlib.use('Agg'); print('Agg backend OK')"
 
-    - name: Run tests with coverage
+    - name: Verify Tkinter with virtual display
       run: |
-        pytest -q --cov=. --cov-report=xml --cov-report=term
+        xvfb-run -a python -c "import tkinter as tk; root = tk.Tk(); root.withdraw(); root.destroy(); print('Tkinter OK with xvfb')"
+
+    - name: Run tests with coverage (headless X display)
+      run: |
+        xvfb-run -a pytest -q --cov=. --cov-report=xml --cov-report=term
 
     - name: Upload coverage to artifact
       uses: actions/upload-artifact@v4
