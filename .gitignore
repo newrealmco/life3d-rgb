@@ -1,0 +1,13 @@
+# IDE
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Outputs
+out/
+
+# macOS
+.DS_Store

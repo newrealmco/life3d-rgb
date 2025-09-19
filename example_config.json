@@ -1,0 +1,23 @@
+{
+  "shape": [24, 24, 24],
+  "steps": 40,
+  "rule": { "birth": [6], "survive": [5, 6, 7] },
+  "mutation": {
+    "enable": true,
+    "per_step_birth_mutation_prob": 0.25,
+    "std": 35.0,
+    "p_interval": 0.15
+  },
+  "seeds": [
+    { "z": 12, "y": 12, "x": 12, "rgb": [255, 80, 80] },
+    { "z": 12, "y": 12, "x": 13, "rgb": [80, 255, 80] },
+    { "z": 12, "y": 13, "x": 12, "rgb": [80, 80, 255] },
+    { "z": 11, "y": 12, "x": 12, "rgb": [255, 255, 80] },
+    { "z": 13, "y": 12, "x": 12, "rgb": [80, 255, 255] }
+  ],
+  "outdir": "./out",
+  "render_every": 1,
+  "slice_every": 0,
+  "verbose": true,
+  "random_state": 42
+}
