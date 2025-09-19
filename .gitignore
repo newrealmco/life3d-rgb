@@ -4,10 +4,29 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 venv/
+env/
+.env
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
 
 # Outputs
 out/
 
 # macOS
 .DS_Store
+
+# Temporary files
+*.tmp
+*.temp
