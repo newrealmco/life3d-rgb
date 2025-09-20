@@ -17,7 +17,11 @@
   ],
   "outdir": "./out",
   "render_every": 1,
-  "slice_every": 0,
+  "slice_every": 5,
+  "render_slices": false,
+  "create_gif": true,
+  "gif_fps": 8,
+  "delete_frames_after": false,
   "verbose": true,
   "random_state": 42
 }
