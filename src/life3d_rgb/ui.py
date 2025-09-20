@@ -1,14 +1,12 @@
-import tkinter as tk
-from tkinter import ttk, messagebox, colorchooser, simpledialog
 from typing import List, Dict, Any
 import os
 import random
 import datetime
 from pathlib import Path
 
-from life3d import Life3DRGB
-from visualize import render_voxels
-from death_switch import (
+from .engine import Life3DRGB
+from .visualize import render_voxels
+from .death_switch import (
     list_step_frames, build_gif, delete_files,
     handle_extinction_cleanup, create_gif_after_extinction
 )
@@ -1446,6 +1444,28 @@ class App(tk.Tk):
             self._set_status("Simulation failed")
             messagebox.showerror("Error", f"Simulation failed:\n{str(e)}")
 
-if __name__ == "__main__":
+def main():
+    """Main UI entry point with guarded Tkinter imports."""
+    try:
+        import tkinter as tk
+        from tkinter import ttk, messagebox, colorchooser, simpledialog
+    except ImportError:
+        raise SystemExit(
+            "Tkinter is not available in this environment. "
+            "Install a Python build with Tcl/Tk (e.g., python.org or homebrew tcl-tk) and try again."
+        )
+    
+    # Make Tkinter available to the App class
+    globals().update({
+        'tk': tk,
+        'ttk': ttk,
+        'messagebox': messagebox,
+        'colorchooser': colorchooser,
+        'simpledialog': simpledialog
+    })
+    
     app = App()
     app.mainloop()
+
+if __name__ == "__main__":
+    main()

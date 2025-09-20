@@ -10,7 +10,7 @@ import subprocess
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # Import CLI module
-import main
+from life3d_rgb import cli as main
 
 
 def test_cli_imports():
@@ -258,7 +258,7 @@ def test_cli_script_execution():
     try:
         # Run the CLI script
         result = subprocess.run([
-            sys.executable, "main.py", "--config", config_path
+            sys.executable, "-m", "life3d_rgb.cli", "--config", config_path
         ], capture_output=True, text=True, timeout=30)
         
         # Should complete successfully

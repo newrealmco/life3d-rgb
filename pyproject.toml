@@ -1,0 +1,104 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "life3d-rgb"
+version = "0.7.2"
+description = "3D cellular automata (26-neighbor) with RGB inheritance, mutations, GIF output, and optional Tk UI."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Rami Pinku", email = "contact@newrelam.co" }]
+keywords = ["cellular-automata", "3D", "art", "RGB", "voxel", "matplotlib", "simulation", "generative"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Environment :: Console",
+  "Environment :: X11 Applications :: Qt",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Games/Entertainment :: Simulation",
+  "Topic :: Artistic Software",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: End Users/Desktop",
+]
+dependencies = [
+  "numpy>=1.24,<3.0",
+  "matplotlib>=3.7,<4.0",
+  "imageio>=2.31,<3.0",
+]
+
+[project.optional-dependencies]
+ui = []  # placeholder for future UI-specific dependencies
+dev = [
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+  "black>=23.0",
+  "isort>=5.0",
+  "mypy>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/anthropics/claude-code"
+Repository = "https://github.com/anthropics/claude-code"
+Issues = "https://github.com/anthropics/claude-code/issues"
+Documentation = "https://github.com/anthropics/claude-code#readme"
+
+[project.scripts]
+life3d-rgb = "life3d_rgb.cli:main"
+life3d-rgb-ui = "life3d_rgb.ui_main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/life3d_rgb"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"src/life3d_rgb/presets" = "life3d_rgb/presets"
+
+[tool.hatch.build]
+exclude = [
+  "/.github",
+  "/.idea",
+  "/venv*",
+  "/env*", 
+  "/out*",
+  "/examples",
+  "/.pytest_cache",
+  "/.coverage*",
+  "/coverage.xml",
+  "/dist",
+  "/build",
+  "/tests",
+  "/.vscode",
+  "/*.egg-info",
+  "/node_modules",
+  "/.mypy_cache",
+  "/.ruff_cache",
+  "/.tox",
+  "/__pycache__",
+  "*.pyc",
+  "*.pyo",
+  "*.pyd",
+  ".DS_Store",
+  "Thumbs.db",
+]
+
+# Development tools configuration
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

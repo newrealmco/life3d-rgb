@@ -1,0 +1,1 @@
+"""Preset configurations for life3d-rgb simulations."""

@@ -6,10 +6,15 @@ import hashlib
 import numpy as np
 from typing import Any, Dict, List
 from pathlib import Path
+try:
+    from importlib.resources import files
+except ImportError:
+    # Fallback for Python < 3.9
+    from importlib_resources import files
 
-from life3d import Life3DRGB
-from visualize import render_voxels, render_slice_grid
-from death_switch import (
+from .engine import Life3DRGB
+from .visualize import render_voxels, render_slice_grid
+from .death_switch import (
     list_step_frames, build_gif, delete_files,
     handle_extinction_cleanup, create_gif_after_extinction
 )
@@ -278,12 +283,43 @@ def run_sim(config: Dict[str, Any]) -> None:
         print(f"   Valid frames: {len(get_step_frames(outdir))}")
         print(f"   {gif_status}")
 
-if __name__ == "__main__":
+def load_preset(preset_name: str) -> Dict[str, Any]:
+    """Load a preset configuration from package resources."""
+    try:
+        preset_files = files("life3d_rgb.presets")
+        preset_path = preset_files / f"{preset_name}.json"
+        return json.loads(preset_path.read_text())
+    except Exception as e:
+        raise FileNotFoundError(f"Preset '{preset_name}' not found: {e}")
+
+def main():
+    """Main CLI entry point."""
     ap = argparse.ArgumentParser(description="3D Life with RGB birth colors + mutations")
-    ap.add_argument("--config", type=str, default="example_config.json", help="Path to JSON config")
+    ap.add_argument("--config", type=str, help="Path to JSON config file")
+    ap.add_argument("--preset", type=str, help="Use built-in preset (sample, starburst, example_config)")
+    ap.add_argument("--list-presets", action="store_true", help="List available presets")
     args = ap.parse_args()
     
-    with open(args.config, "r") as f:
-        cfg = json.load(f)
+    if args.list_presets:
+        try:
+            preset_files = files("life3d_rgb.presets")
+            presets = [f.stem for f in preset_files.iterdir() if f.suffix == ".json"]
+            print("Available presets:")
+            for preset in sorted(presets):
+                print(f"  {preset}")
+        except Exception as e:
+            print(f"Error listing presets: {e}")
+        return
+    
+    if args.preset:
+        cfg = load_preset(args.preset)
+    elif args.config:
+        with open(args.config, "r") as f:
+            cfg = json.load(f)
+    else:
+        ap.error("Either --config or --preset is required")
     
     run_sim(cfg)
+
+if __name__ == "__main__":
+    main()

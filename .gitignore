@@ -30,3 +30,6 @@ out/
 # Temporary files
 *.tmp
 *.temp
+
+# pypi
+.pypirc

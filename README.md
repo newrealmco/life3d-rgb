@@ -18,23 +18,56 @@ Key Features:
 - **Camera rotation**: Dynamic GIFs with configurable rotation
 - **Preset system**: Quick presets for snowflakes, spheres, fractals, and more
 
-## Quick start
+## Install & Run
 
-### GUI Mode (Recommended)
+### Install from PyPI
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python ui.py
+pip install life3d-rgb
 ```
 
-### Command Line Mode
+### GUI Mode (Interactive)
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python main.py --config example_config.json
+life3d-rgb-ui
 ```
+
+### CLI Mode (Headless)
+```bash
+# Use built-in presets
+life3d-rgb --preset starburst
+life3d-rgb --preset sample
+
+# List available presets
+life3d-rgb --list-presets
+
+# Use custom config
+life3d-rgb --config path/to/config.json
+```
+
+### Python Module
+```bash
+python -m life3d_rgb --preset starburst
+```
+
+### Development Install
+```bash
+git clone https://github.com/your-repo/life3d-rgb
+cd life3d-rgb
+pip install -e .
+```
+
+## Configuration Reference
+
+See built-in presets for examples. Key parameters:
+
+- **shape**: `[Z,Y,X]` - 3D grid dimensions
+- **steps**: Number of simulation iterations  
+- **rule**: `{"birth": [6], "survive": [5,6,7]}` - Cellular automaton rules
+- **color_inheritance_mode**: Color blending method (hsv_boosted_mean recommended)
+- **seeds**: `[{z,y,x,rgb}, ...]` - Initial living cells
+- **create_gif**: Generate animated output
+- **auto_stop_extinction**: Stop when population dies out
+
+For complete documentation, use `life3d-rgb --preset sample` to see a fully documented configuration.
 
 ## User Interface Features
 
