@@ -1,9 +1,9 @@
 import numpy as np
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from life3d import Life3DRGB
+from life3d_rgb.engine import Life3DRGB
 
 def test_birth_color_mean_of_neighbors():
     """Newborn gets mean color of living neighbors within radius 2."""

@@ -3,9 +3,9 @@ import sys
 import pytest
 import numpy as np
 import colorsys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from life3d import Life3DRGB
+from life3d_rgb.engine import Life3DRGB
 
 def rgb_to_hsv_mean_saturation(rgb_array):
     """Compute mean saturation of RGB colors."""

@@ -2,9 +2,9 @@ import numpy as np
 import os
 import tempfile
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from visualize import render_voxels, render_slice_grid
+from life3d_rgb.visualize import render_voxels, render_slice_grid
 
 def test_render_voxels_smoke_test():
     """Smoke test: render a tiny grid to PNG using Agg backend."""

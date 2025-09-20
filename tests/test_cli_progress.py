@@ -7,9 +7,12 @@ import tempfile
 import json
 from pathlib import Path
 import pytest
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import CLI module
-import main
+from life3d_rgb import cli as main
 
 
 def test_simulation_advances_every_step():

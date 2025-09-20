@@ -1,7 +1,7 @@
 import os
 import sys
 import pytest
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Skip UI tests if running in headless environment without display
 # Strategy: Only skip on Linux without DISPLAY environment variable
@@ -44,7 +44,7 @@ def test_tkinter_available():
 def test_ui_imports():
     """Test that UI module can be imported without errors."""
     try:
-        import ui
+        from life3d_rgb import ui
         assert hasattr(ui, 'App')
         assert hasattr(ui, 'SeedManager')
     except ImportError as e:
@@ -53,7 +53,7 @@ def test_ui_imports():
 @pytest.mark.skipif(not TKINTER_AVAILABLE, reason="tkinter not available")
 def test_app_class_creation():
     """Test that App class can be instantiated without errors."""
-    import ui
+    from life3d_rgb import ui
     
     # Create app but don't call mainloop (which would block)
     try:
@@ -70,7 +70,7 @@ def test_app_class_creation():
 @pytest.mark.skipif(not TKINTER_AVAILABLE, reason="tkinter not available")
 def test_seed_manager_creation():
     """Test that SeedManager can be created."""
-    import ui
+    from life3d_rgb import ui
     import tkinter as tk
     
     try:
@@ -97,7 +97,7 @@ def test_seed_manager_creation():
 @pytest.mark.skipif(not TKINTER_AVAILABLE, reason="tkinter not available")
 def test_ui_variables_initialization():
     """Test that App initializes all required variables."""
-    import ui
+    from life3d_rgb import ui
     
     try:
         app = ui.App()
@@ -122,7 +122,7 @@ def test_ui_module_structure():
     import importlib.util
     import os
     
-    ui_path = os.path.join(os.path.dirname(__file__), '..', 'ui.py')
+    ui_path = os.path.join(os.path.dirname(__file__), '..', 'src', 'life3d_rgb', 'ui.py')
     spec = importlib.util.spec_from_file_location("ui", ui_path)
     
     # Just test that the file can be read and has expected structure
@@ -132,5 +132,5 @@ def test_ui_module_structure():
     assert 'class App(' in content
     assert 'class SeedManager(' in content
     assert 'import tkinter' in content
-    assert 'from life3d import Life3DRGB' in content
-    assert 'from visualize import render_voxels' in content
+    assert 'from .engine import Life3DRGB' in content
+    assert 'from .visualize import render_voxels' in content

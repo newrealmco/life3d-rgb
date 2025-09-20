@@ -16,6 +16,14 @@ try:
 except Exception:
     imageio = None
 
+# Import tkinter components for direct module imports (testing)
+try:
+    import tkinter as tk
+    from tkinter import ttk, messagebox, colorchooser, simpledialog
+except ImportError:
+    # Will be handled by ui_main.py when used as entry point
+    tk = ttk = messagebox = colorchooser = simpledialog = None
+
 class ScrollableFrame(ttk.Frame):
     """A scrollable frame using canvas and scrollbar."""
     def __init__(self, container):
