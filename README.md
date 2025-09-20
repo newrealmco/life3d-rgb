@@ -20,11 +20,20 @@ Key Features:
 
 ## Quick start
 
+### GUI Mode (Recommended)
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python ui.py
+```
+
+### Command Line Mode
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py --config example_config.json
 ```
 
 ## User Interface Features
@@ -51,6 +60,86 @@ Each preset automatically configures birth/survival rules, grid size, seeds, col
 - **Frame management**: Choose to keep or delete PNG frames after GIF creation
 - **Camera rotation**: Optional dynamic rotation during GIF creation (degrees per step)
 - **High-resolution final**: Configurable DPI and dimensions for print quality
+
+## Command Line Interface
+
+The CLI mode (`main.py`) provides automated batch processing with JSON configuration files.
+
+### Basic Usage
+
+```bash
+# Run with default config
+python main.py --config example_config.json
+
+# Use custom config
+python main.py --config my_simulation.json
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `shape` | `[Z,Y,X]` | **Required** | 3D grid dimensions |
+| `steps` | `integer` | **Required** | Number of simulation steps |
+| `rule` | `object` | **Required** | Birth/survive neighbor counts |
+| `seeds` | `array` | **Required** | Initial seed cells with positions and colors |
+| `render_slices` | `boolean` | `false` | Enable slice rendering (opt-in only) |
+| `create_gif` | `boolean` | `false` | Create animated GIF from step frames |
+| `gif_fps` | `integer` | `8` | GIF frame rate (1-30 FPS) |
+| `delete_frames_after` | `boolean` | `false` | Delete PNG frames after successful GIF creation |
+
+### Example Configuration
+
+```json
+{
+  "shape": [32, 32, 32],
+  "steps": 100,
+  "rule": {"birth": [6], "survive": [5, 6, 7]},
+  "seeds": [
+    {"z": 16, "y": 16, "x": 16, "rgb": [255, 100, 100]},
+    {"z": 15, "y": 16, "x": 16, "rgb": [100, 255, 100]}
+  ],
+  "color_inheritance_mode": "hsv_boosted_mean",
+  "outdir": "./results",
+  "create_gif": true,
+  "gif_fps": 12,
+  "delete_frames_after": true,
+  "verbose": true
+}
+```
+
+### CLI Features
+
+- ✅ **Fixed color rendering**: Produces properly colored voxel images (not black/empty)
+- ✅ **Slice control**: Only renders slices when explicitly enabled via `render_slices: true`
+- ✅ **Smart GIF creation**: Builds animations from step frames only, ignoring slice files
+- ✅ **Safe frame deletion**: Only deletes frames after successful GIF creation
+- ✅ **Live diagnostics**: Shows alive cell counts every 20 steps with extinction detection
+- ✅ **Robust error handling**: Comprehensive validation and user-friendly error messages
+
+### Advanced CLI Options
+
+```json
+{
+  "color_inheritance_mode": "hsv_boosted_mean",
+  "color_params": {
+    "saturation_boost": 1.3,
+    "saturation_floor": 0.35
+  },
+  "mutation": {
+    "enable": true,
+    "per_birth_mutation_prob": 0.15,
+    "per_step_mutation_prob": 0.1,
+    "mutation_std": 30.0
+  },
+  "render_every": 1,
+  "slice_every": 10,
+  "render_slices": false,
+  "random_state": 42
+}
+```
+
+See `config_schema.md` for complete configuration documentation.
 
 ## Color Inheritance Modes
 
