@@ -2,11 +2,17 @@ import argparse
 import json
 import os
 import glob
+import hashlib
+import numpy as np
 from typing import Any, Dict, List
 from pathlib import Path
 
 from life3d import Life3DRGB
 from visualize import render_voxels, render_slice_grid
+from death_switch import (
+    list_step_frames, build_gif, delete_files,
+    handle_extinction_cleanup, create_gif_after_extinction
+)
 
 try:
     import imageio.v2 as imageio
@@ -97,6 +103,10 @@ def delete_frames(frames: List[Path], also_delete_slices: bool = False) -> int:
     
     return deleted_count
 
+def hash_alive(alive: np.ndarray) -> str:
+    """Create hash of alive state for steady-state detection."""
+    return hashlib.md5(alive.view(np.uint8)).hexdigest()
+
 def run_sim(config: Dict[str, Any]) -> None:
     """Run simulation with JSON configuration."""
     shape = tuple(config["shape"])  # [Z,Y,X]
@@ -114,16 +124,25 @@ def run_sim(config: Dict[str, Any]) -> None:
     outdir = config.get("outdir","./out")
     os.makedirs(outdir, exist_ok=True)
 
-    # New configuration options
-    render_slices = config.get("render_slices", False)  # Default false
+    # Configuration options
+    render_slices = config.get("render_slices", False)
     create_gif_flag = config.get("create_gif", False)
     gif_fps = config.get("gif_fps", 8)
     delete_frames_after = config.get("delete_frames_after", False)
+    render_every = max(1, int(config.get("render_every", 1)))
+    slice_every = int(config.get("slice_every", 0))
+    final_only = config.get("render_final_only", False)
+    
+    # Auto-stop settings
+    auto_stop_extinction = config.get("auto_stop_extinction", True)
+    auto_stop_steady = config.get("auto_stop_steady", True) 
+    steady_patience = int(config.get("steady_patience", 50))
     
     print(f"🚀 Starting 3D Life simulation")
     print(f"Grid: {shape[0]}×{shape[1]}×{shape[2]}, Steps: {steps}")
     print(f"Seeds: {len(seed_cells)}, Render slices: {render_slices}")
     print(f"Create GIF: {create_gif_flag} (FPS: {gif_fps})")
+    print(f"Auto-stop: extinction={auto_stop_extinction}, steady={auto_stop_steady} (patience={steady_patience})")
     
     sim = Life3DRGB(
         shape=shape, 
@@ -135,55 +154,129 @@ def run_sim(config: Dict[str, Any]) -> None:
         random_state=config.get("random_state")
     )
 
-    # Initial diagnostics and render
-    alive_count = sim.alive.sum()
+    # Initial render (step 0)
+    alive_count = int(sim.alive.sum())
     print(f"Step 0: {alive_count} alive cells")
     
-    render_voxels(sim.alive, sim.rgb, os.path.join(outdir, f"step_000.png"), title="step 0")
+    if not final_only:
+        render_voxels(sim.alive, sim.rgb, os.path.join(outdir, f"step_000.png"), title="step 0")
+        if render_slices and slice_every > 0:  # Render initial slices if enabled
+            render_slice_grid(sim.alive, sim.rgb, os.path.join(outdir, f"step_000_slices.png"), axis=0)
 
-    for t in range(1, steps+1):
+    # Main simulation loop with robust stepping and steady-state detection
+    extinct = False
+    steady_stopped = False
+    last_alive_step = 0 if alive_count > 0 else -1
+    
+    # Steady-state detection
+    steady_cnt = 0
+    prev_hash = hash_alive(sim.alive)
+    
+    actual_steps = 0
+    
+    for step in range(1, steps + 1):
+        # ALWAYS advance simulation
         sim.step()
+        actual_steps = step
         
-        # Diagnostics every 20 steps
-        if t % 20 == 0:
-            alive_count = sim.alive.sum()
-            print(f"Step {t}: {alive_count} alive cells")
+        # Get current state
+        cur_alive = sim.alive
+        cur_hash = hash_alive(cur_alive)
+        alive_count = int(cur_alive.sum())
+        
+        # Track last step with living cells
+        if alive_count > 0:
+            last_alive_step = step
+        
+        # Extinction check - stop immediately if no cells alive
+        if alive_count == 0 and auto_stop_extinction:
+            extinct = True
+            print(f"⚠️  Population extinct at step {step}. Stopping early.")
+            break
+        
+        # Steady-state detection
+        if auto_stop_steady and alive_count > 0:
+            if cur_hash == prev_hash:
+                steady_cnt += 1
+                if steady_cnt >= steady_patience:
+                    steady_stopped = True
+                    print(f"⚠️  Steady state detected at step {step} (unchanged for {steady_cnt} steps). Stopping early.")
+                    break
+            else:
+                steady_cnt = 0
+                prev_hash = cur_hash
+        
+        # Render frames based on cadence (not tied to stepping)
+        if not final_only and (step % render_every == 0):
+            render_voxels(sim.alive, sim.rgb, os.path.join(outdir, f"step_{step:03d}.png"), title=f"step {step}")
             
-            # Early extinction detection
-            if alive_count == 0:
-                print(f"⚠️  Simulation extinct at step {t}. Stopping early.")
-                break
+            # Render slice grid if enabled
+            if render_slices and slice_every > 0 and (step % slice_every == 0):
+                render_slice_grid(sim.alive, sim.rgb, os.path.join(outdir, f"step_{step:03d}_slices.png"), axis=0)
         
-        # Render step frame
-        if t % max(1, int(config.get("render_every", 1))) == 0:
-            render_voxels(sim.alive, sim.rgb, os.path.join(outdir, f"step_{t:03d}.png"), title=f"step {t}")
+        # Periodic logging for debugging
+        if step % 10 == 0:
+            print(f"[dbg] step={step} alive={alive_count} steady={steady_cnt}")
         
-        # Render slice grid only if explicitly enabled and slice_every > 0
-        slice_every = int(config.get("slice_every", 0))
-        if render_slices and slice_every > 0 and t % slice_every == 0:
-            render_slice_grid(sim.alive, sim.rgb, os.path.join(outdir, f"step_{t:03d}_slices.png"), axis=0)
-            
-        if config.get("verbose", False) and t % 10 == 0:
-            print(f"  step {t}")
+        if config.get("verbose", False) and step % 10 == 0:
+            print(f"  step {step}")
 
     # Final diagnostics
     final_alive = sim.alive.sum()
-    print(f"🏁 Simulation complete. Final: {final_alive} alive cells")
+    stop_reason = "normal completion"
+    if extinct:
+        stop_reason = f"extinction at step {actual_steps}"
+    elif steady_stopped:
+        stop_reason = f"steady state at step {actual_steps}"
+    
+    print(f"🏁 Simulation stopped: {stop_reason}. Final: {final_alive} alive cells")
 
-    # GIF creation and frame management
+    # GIF creation with death switch support
+    gif_status = "No GIF created"
+    
     if create_gif_flag and imageio:
+        # Get all step frames
         step_frames = get_step_frames(outdir)
+        
+        # Apply death switch: only use frames up to last_alive_step
+        if last_alive_step >= 0:
+            valid_frames = []
+            for frame in step_frames:
+                try:
+                    # Extract step number from filename
+                    stem = frame.stem  # "step_XXX"
+                    step_num = int(stem.split("_")[1])
+                    if step_num <= last_alive_step:
+                        valid_frames.append(frame)
+                except (IndexError, ValueError):
+                    continue
+            step_frames = valid_frames
+        
         if len(step_frames) >= 2:
             gif_path = os.path.join(outdir, "evolution.gif")
             gif_success = create_gif(step_frames, gif_path, gif_fps)
             
-            if gif_success and delete_frames_after:
-                deleted_count = delete_frames(step_frames, also_delete_slices=render_slices)
-                print(f"🗑️  Deleted {deleted_count} frame files after GIF creation")
+            if gif_success:
+                gif_status = f"GIF created ({len(step_frames)} frames)"
+                if delete_frames_after:
+                    deleted_count = delete_frames(step_frames, also_delete_slices=render_slices)
+                    print(f"🗑️  Deleted {deleted_count} frame files after GIF creation")
+                    gif_status += f", {deleted_count} frames deleted"
+            else:
+                gif_status = "GIF creation failed"
         else:
             print(f"⚠️  Cannot create GIF: only {len(step_frames)} frame(s) found")
+            gif_status = f"Insufficient frames ({len(step_frames)})"
     elif create_gif_flag and not imageio:
         print("⚠️  GIF creation requested but imageio not available")
+        gif_status = "imageio not available"
+    
+    # Final report
+    if extinct or steady_stopped:
+        print(f"\n💀 [AUTO-STOP ACTIVATED]")
+        print(f"   Reason: {stop_reason}")
+        print(f"   Valid frames: {len(get_step_frames(outdir))}")
+        print(f"   {gif_status}")
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="3D Life with RGB birth colors + mutations")

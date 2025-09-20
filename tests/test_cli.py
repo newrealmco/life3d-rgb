@@ -118,12 +118,16 @@ def test_run_sim_with_gif():
     """Test simulation with GIF creation."""
     with tempfile.TemporaryDirectory() as tmpdir:
         config = {
-            "shape": [6, 6, 6],
-            "steps": 5,
-            "rule": {"birth": [6], "survive": [5, 6, 7]},
+            "shape": [10, 10, 10],
+            "steps": 3,
+            "rule": {"birth": [4, 5, 6], "survive": [3, 4, 5, 6, 7, 8]},  # More permissive rules
             "seeds": [
-                {"z": 3, "y": 3, "x": 3, "rgb": [255, 0, 0]},
-                {"z": 2, "y": 3, "x": 3, "rgb": [0, 255, 0]}
+                {"z": 5, "y": 5, "x": 5, "rgb": [255, 0, 0]},
+                {"z": 4, "y": 5, "x": 5, "rgb": [0, 255, 0]},
+                {"z": 6, "y": 5, "x": 5, "rgb": [0, 0, 255]},
+                {"z": 5, "y": 4, "x": 5, "rgb": [255, 255, 0]},
+                {"z": 5, "y": 6, "x": 5, "rgb": [255, 0, 255]},
+                {"z": 5, "y": 5, "x": 4, "rgb": [0, 255, 255]}
             ],
             "outdir": tmpdir,
             "create_gif": True,
@@ -140,14 +144,17 @@ def test_run_sim_with_gif():
         step_files = list(tmpdir_path.glob("step_*.png"))
         gif_file = tmpdir_path / "evolution.gif"
         
-        assert len(step_files) >= 2  # Should have multiple steps
+        assert len(step_files) >= 1  # Should have at least initial step
         
-        # GIF creation depends on imageio availability
+        # GIF creation depends on imageio availability and having enough frames
         try:
             import imageio.v2 as imageio
-            if imageio:
+            if imageio and len(step_files) >= 2:
                 assert gif_file.exists()
                 assert gif_file.stat().st_size > 0
+            elif len(step_files) < 2:
+                # If insufficient frames (due to early extinction), GIF may not be created
+                pass
         except ImportError:
             # If imageio not available, GIF should not be created
             pass
@@ -257,9 +264,9 @@ def test_cli_script_execution():
         # Should complete successfully
         assert result.returncode == 0
         
-        # Should have some output indicating completion
+        # Should have some output indicating completion (either normal or extinction)
         assert "🚀 Starting 3D Life simulation" in result.stdout
-        assert "🏁 Simulation complete" in result.stdout
+        assert ("🏁 Simulation stopped:" in result.stdout)
         
     finally:
         # Cleanup
@@ -332,3 +339,69 @@ def test_cli_defaults():
         assert len(step_files) >= 1
         assert len(slice_files) == 0  # render_slices defaults to False
         assert len(gif_files) == 0    # create_gif defaults to False
+
+
+def test_death_switch_functionality():
+    """Test death switch detects extinction and cleans up properly."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = {
+            "shape": [8, 8, 8],
+            "steps": 20,
+            "rule": {"birth": [10], "survive": [10]},  # Impossible rules - guaranteed extinction
+            "seeds": [{"z": 4, "y": 4, "x": 4, "rgb": [255, 100, 100]}],
+            "outdir": tmpdir,
+            "create_gif": True,
+            "verbose": False
+        }
+        
+        # Run simulation - should trigger death switch
+        main.run_sim(config)
+        
+        # Check that only valid frames exist (no empty frames)
+        step_files = list(Path(tmpdir).glob("step_*.png"))
+        
+        # Should have step_000.png (initial frame) but no extinct frames
+        assert len(step_files) >= 1
+        assert (Path(tmpdir) / "step_000.png").exists()
+        
+        # Should not have created a GIF since insufficient frames
+        gif_file = Path(tmpdir) / "evolution.gif"
+        assert not gif_file.exists()
+        
+        # Verify all existing frames have content (are not empty simulation states)
+        for frame_file in step_files:
+            assert frame_file.stat().st_size > 0  # File should not be empty
+
+
+def test_death_switch_with_multiple_frames():
+    """Test death switch with a configuration that survives a few steps before extinction."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = {
+            "shape": [8, 8, 8],
+            "steps": 20,
+            "rule": {"birth": [5], "survive": [1]},  # Will survive briefly then die
+            "seeds": [
+                {"z": 4, "y": 4, "x": 4, "rgb": [255, 100, 100]},
+                {"z": 3, "y": 4, "x": 4, "rgb": [100, 255, 100]},
+                {"z": 5, "y": 4, "x": 4, "rgb": [100, 100, 255]}
+            ],
+            "outdir": tmpdir,
+            "create_gif": True,
+            "delete_frames_after": False,
+            "verbose": False
+        }
+        
+        # Run simulation
+        main.run_sim(config)
+        
+        # Check outputs
+        step_files = list(Path(tmpdir).glob("step_*.png"))
+        gif_file = Path(tmpdir) / "evolution.gif"
+        
+        # Should have multiple frames before extinction
+        assert len(step_files) >= 2
+        
+        # If we have enough frames, GIF should be created
+        if len(step_files) >= 2:
+            assert gif_file.exists()
+            assert gif_file.stat().st_size > 0

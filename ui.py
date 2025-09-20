@@ -8,6 +8,10 @@ from pathlib import Path
 
 from life3d import Life3DRGB
 from visualize import render_voxels
+from death_switch import (
+    list_step_frames, build_gif, delete_files,
+    handle_extinction_cleanup, create_gif_after_extinction
+)
 
 try:
     import imageio.v2 as imageio
@@ -1257,6 +1261,8 @@ class App(tk.Tk):
 
             actual_steps = 0
             auto_stop_reason = None
+            extinct = False
+            last_alive_step = 0
             
             for t in range(1, steps + 1):
                 prog_label.config(text=f"Simulating step {t} of {steps}...")
@@ -1265,12 +1271,18 @@ class App(tk.Tk):
                 sim.step()
                 actual_steps = t
                 
-                # Check auto-stop conditions
+                # Check for extinction BEFORE rendering (death switch logic)
+                if sim.is_extinct():
+                    extinct = True
+                    auto_stop_reason = "extinction (no living cells)"
+                    break
+                
+                # Update last alive step
+                last_alive_step = t
+                
+                # Check other auto-stop conditions
                 if self.auto_stop_enable.get():
-                    if sim.is_extinct():
-                        auto_stop_reason = "extinction (no living cells)"
-                        break
-                    elif sim.is_steady_state():
+                    if sim.is_steady_state():
                         auto_stop_reason = f"steady state ({self.steady_state_threshold.get()} identical steps)"
                         break
                 
@@ -1295,28 +1307,52 @@ class App(tk.Tk):
                     render_voxels(sim.alive, sim.rgb, str(frame_path), title=f"step {t}", **render_kwargs)
                     frames.append(str(frame_path))
 
-            # Final frame
-            prog_label.config(text="Rendering final image...")
-            self.update()
-            
-            final_path = outdir / f"final_step_{actual_steps:03d}.png"
-            render_kwargs = {
-                "age": sim.age if self.color_by_age.get() else None,
-                "color_by_age": self.color_by_age.get(),
-                "age_cmap": self.age_cmap.get(),
-                "age_alpha": self.age_alpha.get()
-            }
-            
-            if self.render_final_only.get() and self.hr_enable.get():
-                figsize = (float(self.hr_width.get()), float(self.hr_height.get()))
-                dpi = int(self.hr_dpi.get())
-                render_voxels(sim.alive, sim.rgb, str(final_path), title=f"final (step {actual_steps})", 
-                            figsize=figsize, dpi=dpi, **render_kwargs)
-            else:
-                render_voxels(sim.alive, sim.rgb, str(final_path), title=f"final (step {actual_steps})",
-                            **render_kwargs)
+            # Final frame (only render if not extinct or if final-only mode)
+            final_path = None
+            if not extinct or self.render_final_only.get():
+                prog_label.config(text="Rendering final image...")
+                self.update()
+                
+                # Use last_alive_step for final image if extinct, otherwise actual_steps
+                final_step_num = last_alive_step if extinct else actual_steps
+                final_path = outdir / f"final_step_{final_step_num:03d}.png"
+                
+                render_kwargs = {
+                    "age": sim.age if self.color_by_age.get() else None,
+                    "color_by_age": self.color_by_age.get(),
+                    "age_cmap": self.age_cmap.get(),
+                    "age_alpha": self.age_alpha.get()
+                }
+                
+                # Only render final if there are living cells (avoid empty final image)
+                if sim.alive.sum() > 0:
+                    if self.render_final_only.get() and self.hr_enable.get():
+                        figsize = (float(self.hr_width.get()), float(self.hr_height.get()))
+                        dpi = int(self.hr_dpi.get())
+                        render_voxels(sim.alive, sim.rgb, str(final_path), title=f"final (step {final_step_num})", 
+                                    figsize=figsize, dpi=dpi, **render_kwargs)
+                    else:
+                        render_voxels(sim.alive, sim.rgb, str(final_path), title=f"final (step {final_step_num})",
+                                    **render_kwargs)
+                elif extinct:
+                    # Don't create empty final image on extinction
+                    final_path = None
 
-            # Enhanced GIF creation
+            # Handle extinction cleanup if needed (death switch)
+            valid_frames = None
+            deleted_frames_count = 0
+            
+            if extinct and not self.render_final_only.get():
+                # Clean up empty frames and get valid frames for GIF
+                valid_frames, deleted_frames_count = handle_extinction_cleanup(
+                    outdir=outdir,
+                    current_step=last_alive_step + 1,  # The step where extinction occurred
+                    last_alive_step=last_alive_step,
+                    render_slices=False,  # UI doesn't render slices in the main loop
+                    slice_every=0
+                )
+            
+            # Enhanced GIF creation with death switch support
             gif_path = None
             frames_deleted = 0
             
@@ -1324,19 +1360,27 @@ class App(tk.Tk):
                 prog_label.config(text="Creating animated GIF...")
                 self.update()
                 
-                # Get frames in proper order
-                frame_paths = self._list_run_frames(outdir)
+                # Use valid frames from extinction cleanup if available, otherwise get all frames
+                if valid_frames is not None:
+                    frame_paths = valid_frames
+                else:
+                    frame_paths = list_step_frames(outdir)
                 
                 if len(frame_paths) >= 2:
                     gif_path = outdir / "evolution.gif"
                     fps = max(1, self.gif_fps.get())
                     
-                    if self._build_animated_gif(frame_paths, gif_path, fps):
+                    if extinct:
+                        gif_success = create_gif_after_extinction(frame_paths, gif_path, fps)
+                    else:
+                        gif_success = build_gif(frame_paths, gif_path, fps)
+                    
+                    if gif_success:
                         # GIF created successfully
                         if self.gif_cleanup.get() == "delete":
                             prog_label.config(text="Cleaning up frame files...")
                             self.update()
-                            frames_deleted = self._delete_frames(frame_paths)
+                            frames_deleted = delete_files(frame_paths)
                     else:
                         gif_path = None
                 elif len(frame_paths) == 1:
@@ -1349,7 +1393,7 @@ class App(tk.Tk):
             progress.destroy()
             self.run_button.config(state="normal")
 
-            # Enhanced results
+            # Enhanced results with death switch information
             alive_count = sim.alive.sum()
             total_cells = shape[0] * shape[1] * shape[2]
             
@@ -1361,19 +1405,39 @@ class App(tk.Tk):
             result += "\n"
             if auto_stop_reason:
                 result += f"🛑 Auto-stopped: {auto_stop_reason}\n"
+            if extinct:
+                result += f"💀 Death Switch activated - cleaned {deleted_frames_count} empty frame(s)\n"
             result += f"Grid size: {shape[0]}×{shape[1]}×{shape[2]}\n"
             result += f"Color mode: {self.color_mode.get()}\n\n"
-            result += f"📁 Output:\n• {final_path}"
+            result += f"📁 Output:\n"
+            if final_path:
+                result += f"• {final_path}"
+            elif extinct:
+                result += f"• No final image (empty simulation)"
             
             if gif_path and gif_path.exists():
                 result += f"\n• {gif_path} (animated GIF, {self.gif_fps.get()} FPS)"
+                if extinct:
+                    frame_count = len(valid_frames) if valid_frames else 0
+                    result += f"\n• GIF created from {frame_count} non-empty frames"
                 if frames_deleted > 0:
                     result += f"\n• Cleaned up {frames_deleted} frame files"
                 elif self.gif_cleanup.get() == "keep":
-                    frame_count = len(self._list_run_frames(outdir))
+                    frame_count = len(list_step_frames(outdir))
                     result += f"\n• Kept {frame_count} frame files"
 
-            self._set_status(f"Saved final image to {final_path.name}")
+            # Set status message with death switch info
+            if extinct:
+                status_msg = f"Population extinct at step {last_alive_step + 1}. Stopped early. Cleaned trailing empty frames."
+                if gif_path and gif_path.exists():
+                    status_msg += f" GIF created from non-empty frames."
+                self._set_status(status_msg)
+            else:
+                if final_path:
+                    self._set_status(f"Saved final image to {final_path.name}")
+                else:
+                    self._set_status("Simulation completed")
+            
             messagebox.showinfo("Simulation Complete", result)
 
         except Exception as e:

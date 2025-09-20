@@ -60,6 +60,7 @@ Each preset automatically configures birth/survival rules, grid size, seeds, col
 - **Frame management**: Choose to keep or delete PNG frames after GIF creation
 - **Camera rotation**: Optional dynamic rotation during GIF creation (degrees per step)
 - **High-resolution final**: Configurable DPI and dimensions for print quality
+- **Death Switch**: Automatic extinction handling that stops simulation, cleans empty frames, and creates GIFs from non-empty frames only
 
 ## Command Line Interface
 
@@ -115,6 +116,7 @@ python main.py --config my_simulation.json
 - ✅ **Smart GIF creation**: Builds animations from step frames only, ignoring slice files
 - ✅ **Safe frame deletion**: Only deletes frames after successful GIF creation
 - ✅ **Live diagnostics**: Shows alive cell counts every 20 steps with extinction detection
+- ✅ **Death Switch**: Automatically detects extinction, stops simulation, removes empty frames, and creates GIFs from valid frames only
 - ✅ **Robust error handling**: Comprehensive validation and user-friendly error messages
 
 ### Advanced CLI Options
@@ -295,6 +297,55 @@ pytest -q
 ```
 
 The `.gitignore` file excludes pytest cache and coverage files. All tests should pass before committing changes.
+
+## Death Switch: Automatic Extinction Handling
+
+The **Death Switch** is an automatic feature that activates when the simulation reaches extinction (no living cells). This prevents empty frames from cluttering output and ensures clean GIF creation.
+
+### How It Works
+
+1. **Extinction Detection**: After each simulation step, the system checks if `alive.sum() == 0`
+2. **Immediate Stop**: When extinction is detected, the simulation stops immediately
+3. **Frame Cleanup**: Any empty frames that would represent the extinct state are deleted
+4. **Smart GIF Creation**: GIFs are built only from frames with living cells (non-empty frames)
+5. **Clear Reporting**: Both UI and CLI modes report extinction details
+
+### Behavior by Mode
+
+**CLI Mode:**
+```
+⚠️  Population extinct at step 4. Stopping early.
+[extinction] step=4, removed_empty_frames=0
+[extinction] valid_frames_remaining=4 (up to step 3)
+✅ [extinction] Created GIF: evolution.gif (4 frames, 8 FPS)
+
+💀 [DEATH SWITCH ACTIVATED]
+   Population extinct at step 4
+   Removed 0 empty frame(s)
+   GIF created (4 frames)
+```
+
+**UI Mode:**
+- Shows extinction message in status bar and result dialog
+- Updates progress indicator with extinction details
+- Displays frame cleanup and GIF creation status
+
+### Edge Cases Handled
+
+- **Extinction at step 0**: No GIF created, reports immediate extinction
+- **Extinction at step 1**: Only initial frame kept, GIF creation skipped (< 2 frames)
+- **Final-only mode**: Avoids creating empty final image if simulation is extinct
+- **Slice files**: Also removes corresponding slice files when present
+- **Frame deletion**: Only applies "delete frames after GIF" to successfully created GIFs
+
+### Configuration Impact
+
+No configuration changes needed - the Death Switch works automatically with all existing settings:
+- Respects `create_gif`, `gif_fps`, and `delete_frames_after` options
+- Works with `render_slices` and cleans up slice files appropriately
+- Compatible with all color modes, mutation settings, and rule configurations
+
+The Death Switch ensures clean, professional output by automatically handling the common case of simulation extinction without user intervention.
 
 ## Troubleshooting
 

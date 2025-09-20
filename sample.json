@@ -1,0 +1,209 @@
+{
+  "// BASIC SIMULATION SETTINGS": "Configure the core simulation parameters",
+  
+  "shape": [24, 24, 24],
+  "_shape_info": "3D grid dimensions [Z, Y, X]. Larger grids support more complex patterns but run slower. Examples: [8,8,8] (fast), [32,32,32] (detailed), [64,64,64] (high detail, slow)",
+  
+  "steps": 100,
+  "_steps_info": "Number of simulation steps to run. Examples: 50 (quick test), 200 (medium), 1000+ (long evolution). Auto-stop will prevent infinite runs.",
+  
+  "// CELLULAR AUTOMATON RULES": "Define birth and survival neighbor counts",
+  
+  "rule": {
+    "birth": [6],
+    "_birth_info": "Neighbor counts that cause empty cells to become alive. List of integers 0-26. Examples: [6] (balanced), [4,5] (geometric), [5,6,7,8] (explosive)",
+    
+    "survive": [5, 6, 7],
+    "_survive_info": "Neighbor counts that keep living cells alive. List of integers 0-26. Examples: [5,6,7] (stable), [2,3] (chaotic), [4,5,6,7,8] (very stable)"
+  },
+  "_rule_examples": {
+    "B6/S5-7 (default)": "Balanced growth, creates interesting fractal structures",
+    "B4-5/S3-5": "Geometric patterns, forms square-like structures", 
+    "B5-8/S4-8": "Explosive growth, creates sphere-like patterns",
+    "B3-4/S2-3": "Chaotic oscillations, rapid changes",
+    "B6-7/S4-6": "Crystal-like growth with controlled expansion"
+  },
+  
+  "// INITIAL SEED CELLS": "Define starting living cells with positions and colors",
+  
+  "seeds": [
+    {
+      "z": 12, "y": 12, "x": 12,
+      "_position_info": "Cell position in 3D grid. Must be within shape bounds (0 to shape-1)",
+      
+      "rgb": [255, 100, 100],
+      "_color_info": "RGB color values [Red, Green, Blue] from 0-255. Examples: [255,0,0] (red), [0,255,0] (green), [255,255,0] (yellow)"
+    },
+    {
+      "z": 11, "y": 12, "x": 12,
+      "rgb": [100, 255, 100]
+    },
+    {
+      "z": 13, "y": 12, "x": 12,
+      "rgb": [100, 100, 255]
+    }
+  ],
+  "_seeds_tips": "Use symmetrical clusters for fractal patterns, random scattered seeds for organic growth, or dense clusters for explosive patterns",
+  
+  "// OUTPUT CONFIGURATION": "Control where and how simulation results are saved",
+  
+  "outdir": "./out/sample_run",
+  "_outdir_info": "Directory to save output files. Will be created if it doesn't exist. Use unique names to avoid overwriting",
+  
+  "render_every": 1,
+  "_render_every_info": "Render frame every N steps. 1=every step (smooth animation), 5=every 5th step (faster rendering). Only affects all-steps mode",
+  
+  "render_final_only": false,
+  "_render_final_only_info": "If true, only saves final high-res image. If false, saves all step frames for animation",
+  
+  "// ANIMATION AND GIF SETTINGS": "Configure animated GIF creation",
+  
+  "create_gif": true,
+  "_create_gif_info": "Whether to create animated GIF from step frames. Requires render_final_only=false and imageio library",
+  
+  "gif_fps": 8,
+  "_gif_fps_info": "Frames per second for GIF animation. Range: 1-30. Higher = faster animation, larger file size",
+  
+  "delete_frames_after": false,
+  "_delete_frames_after_info": "Whether to delete PNG frames after successful GIF creation. true=save space, false=keep frames",
+  
+  "// SLICE RENDERING": "Optional 2D cross-section views",
+  
+  "render_slices": false,
+  "_render_slices_info": "Whether to render 2D slice cross-sections through the 3D volume. Creates additional *_slices.png files",
+  
+  "slice_every": 5,
+  "_slice_every_info": "Render slices every N steps. Only used if render_slices=true. Higher values = fewer slice files",
+  
+  "// COLOR INHERITANCE": "Control how newborn cells get their colors",
+  
+  "color_inheritance_mode": "hsv_boosted_mean",
+  "_color_modes": {
+    "mean_r2": "Simple RGB average (causes gray drift over time)",
+    "hsv_boosted_mean": "HSV space with saturation boost (prevents gray drift, recommended)",
+    "random_parent": "Copy exact color from random neighbor (sharp boundaries)",
+    "dist_weighted_mean": "Distance-weighted average (closer neighbors more influential)",
+    "two_parent_blend": "Average of 2 random parents (genetic-like inheritance)"
+  },
+  
+  "color_params": {
+    "_note": "Only used with hsv_boosted_mean mode",
+    "saturation_boost": 1.3,
+    "_saturation_boost_info": "Multiplier for color saturation. Range: 1.0-2.0. Higher = more vivid colors",
+    
+    "saturation_floor": 0.35,
+    "_saturation_floor_info": "Minimum saturation level. Range: 0.0-1.0. Prevents colors from becoming too gray"
+  },
+  
+  "// MUTATION SYSTEM": "Add color diversity and prevent stagnation",
+  
+  "mutation": {
+    "enable": true,
+    "_enable_info": "Master switch for all mutation types",
+    
+    "per_birth_mutation_prob": 0.15,
+    "_per_birth_info": "Probability each newborn cell mutates (0.0-1.0). Recommended: 0.10-0.25",
+    
+    "per_step_mutation_prob": 0.05,
+    "_per_step_info": "Probability of global mutations per step (0.0-1.0). Legacy system, lower values recommended",
+    
+    "max_mutants_per_step": 1,
+    "_max_mutants_info": "Maximum cells that can mutate globally per step. Only affects per_step mutations",
+    
+    "mutation_std": 30.0,
+    "_mutation_std_info": "Standard deviation of color mutations (1.0-80.0). Higher = more dramatic color changes",
+    
+    "p_interval": 0.15,
+    "_p_interval_info": "Probability of 'burst' mutation intervals (0.0-1.0). Creates occasional large mutations"
+  },
+  
+  "// AUTO-STOP CONTROLS": "Prevent infinite simulations",
+  
+  "auto_stop_extinction": true,
+  "_extinction_info": "Stop simulation when all cells die (alive.sum() == 0). Recommended: true",
+  
+  "auto_stop_steady": true,
+  "_steady_info": "Stop simulation when state becomes unchanging. Recommended: true for long runs",
+  
+  "steady_patience": 50,
+  "_patience_info": "Number of identical consecutive steps before stopping. Range: 5-100. Higher = more patience",
+  
+  "// DEBUG AND LOGGING": "Control output verbosity",
+  
+  "verbose": true,
+  "_verbose_info": "Print detailed progress information during simulation. Useful for debugging",
+  
+  "random_state": null,
+  "_random_state_info": "Seed for random number generator. Use integer for reproducible results, null for random",
+  
+  "// ADVANCED OPTIONS": "Less commonly used settings",
+  
+  "_advanced_note": "These options provide fine-grained control for specific use cases",
+  
+  "_high_resolution": {
+    "note": "For UI mode only - CLI always uses standard resolution",
+    "hr_enable": true,
+    "hr_dpi": 300,
+    "hr_width": 12.0,
+    "hr_height": 12.0
+  },
+  
+  "_camera_rotation": {
+    "note": "For UI GIF mode only - creates rotating camera effect",
+    "rotation_enable": false,
+    "rotation_degrees_per_step": 2.0,
+    "rotation_elevation": 20.0
+  },
+  
+  "_age_coloring": {
+    "note": "For UI mode only - blends cell age with RGB colors",
+    "color_by_age": false,
+    "age_cmap": "inferno",
+    "age_alpha": 0.6
+  },
+  
+  "// USAGE EXAMPLES": "Common configuration patterns",
+  
+  "_example_presets": {
+    "quick_test": {
+      "shape": [8, 8, 8],
+      "steps": 20,
+      "note": "Fast test run for experimenting"
+    },
+    
+    "detailed_evolution": {
+      "shape": [32, 32, 32], 
+      "steps": 500,
+      "create_gif": true,
+      "note": "High-detail long evolution with animation"
+    },
+    
+    "final_image_only": {
+      "render_final_only": true,
+      "create_gif": false,
+      "note": "Single high-quality final image"
+    },
+    
+    "explosive_growth": {
+      "rule": {"birth": [5, 6, 7, 8], "survive": [4, 5, 6, 7, 8]},
+      "note": "Very permissive rules for rapid expansion"
+    },
+    
+    "stable_patterns": {
+      "rule": {"birth": [6], "survive": [5, 6, 7]},
+      "steady_patience": 20,
+      "note": "Conservative rules with early steady-state detection"
+    }
+  },
+  
+  "// TROUBLESHOOTING": "Common issues and solutions",
+  
+  "_troubleshooting": {
+    "empty_images": "Check that seeds are within shape bounds and rules allow survival",
+    "immediate_extinction": "Try more permissive survive rules or add more/better positioned seeds", 
+    "gray_drift": "Use hsv_boosted_mean color mode instead of mean_r2",
+    "too_slow": "Reduce shape size, increase render_every, or set render_final_only=true",
+    "no_gif": "Ensure render_final_only=false, create_gif=true, and imageio is installed",
+    "crashes": "Check that all coordinate values are within bounds and all required fields are present"
+  }
+}
