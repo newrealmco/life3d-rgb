@@ -256,10 +256,15 @@ def test_cli_script_execution():
         config_path = f.name
     
     try:
+        # Set up environment with src path
+        env = os.environ.copy()
+        src_path = os.path.join(os.path.dirname(__file__), '..', 'src')
+        env['PYTHONPATH'] = src_path + ':' + env.get('PYTHONPATH', '')
+        
         # Run the CLI script
         result = subprocess.run([
             sys.executable, "-m", "life3d_rgb.cli", "--config", config_path
-        ], capture_output=True, text=True, timeout=30)
+        ], capture_output=True, text=True, timeout=30, env=env)
         
         # Should complete successfully
         assert result.returncode == 0
